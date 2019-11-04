@@ -16,8 +16,10 @@ int main()
 {
     ZM::vertexPoint3D* v1 = new ZM::vertexPoint3D();
     Eigen::Vector3d xx(1,2,3);
-     v1->SetParameters(xx);
-     cout << v1->Dimension() << endl;
+    v1->SetParameters(xx);
+    cout << v1->Parameters() << endl;
+    cout << v1->Dimension() << endl;
+     
 
     ZM::VertexPose6Dof* v2 = new ZM::VertexPose6Dof();
     v2->SetParameters(ZM::SE3Quat());

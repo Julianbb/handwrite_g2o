@@ -217,6 +217,8 @@ public:
         return SE3Quat(Quaterniond(R),V*upsilon);
     }
 
+
+//和slam十四讲不一样，李代数旋转平移顺序不一样
     Matrix<double, 6, 6> adj() const
     {
         Matrix3d R = m_q.toRotationMatrix();

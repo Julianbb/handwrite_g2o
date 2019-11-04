@@ -65,6 +65,11 @@ void EdgeSE3ProjectXYZ::ComputeJacobian()
     m_jacobianOplusXj(1,4) = - fy * Zinv;
     m_jacobianOplusXj(1,5) = fy * Y * Zinv_2;
 
+
+
+    m_jacobians[0] = m_jacobianOplusXi;
+    m_jacobians[1] = m_jacobianOplusXj;
+
 }
 
 

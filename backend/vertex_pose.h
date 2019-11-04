@@ -17,10 +17,18 @@ public:
     VertexPose6Dof(){}
 
 
-virtual void Plus(const Vector6d& delta)
+virtual void Plus(const double* delta)
 {
-    SetParameters(SE3Quat::exp(delta)*Parameters());
+    Eigen::Map<const Vector6d> tmp_delta(delta);
+    SetParameters(SE3Quat::exp(tmp_delta)*Parameters());
 }
+
+virtual std::string TypeVertex()
+{
+    return std::string("VertexPose");
+}
+
+
 
 
  void setToOriginImpl()

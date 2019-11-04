@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project(self_BA)
 
 
-set(CMAKE_BUILD_TYPE "Debug") 
+set(CMAKE_BUILD_TYPE "Release") 
 set(CMAKE_CXX_FLAGS "-std=c++11")
 
 
@@ -13,7 +13,7 @@ include_directories(
 
 
 add_executable(self_BA 
-            main.cpp
+            test/main.cpp
             backend/vertex.h
             backend/vertex.hpp
             backend/vertex_pose.h
@@ -24,5 +24,8 @@ add_executable(self_BA
             backend/edge_SE3ProjectXYZ.cpp
             backend/edge_SE3ProjectXYZ.h
             backend/edge_pose2pose.h
-            backend/edge_pose2pose.cpp)
+            backend/edge_pose2pose.cpp
+            backend/problem.cpp
+            backend/problem.h
+            )
 

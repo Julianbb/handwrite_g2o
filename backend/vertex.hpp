@@ -4,15 +4,11 @@
 template <int D, typename T>
 BaseVertex<D, T>::BaseVertex()
 {
-
+     m_dimension= D;
 }
 
 
-template <int D, typename T>
-void BaseVertex<D,T>::Plus(const EstimateType& delta)
-{
-   
-}
+
 
 
 

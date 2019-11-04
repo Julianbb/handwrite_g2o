@@ -24,20 +24,21 @@ void EdgePose2Pose::ComputeError()
 
 
 
-// TODO: 是否正确，可能和14讲旋转　平移定义的顺序不同
+
 Matrix6d EdgePose2Pose::JRInv(Vector6d error)
 {
     Vector3d R = Vector3d(error(0), error(1), error(2));
     Vector3d fake_t = Vector3d(error(3), error(4), error(5));
-    //Vector3d true_t = SE3Quat::SO3JacobianL(fake_t);   //TODO有问题
+    
 
+    // TODO: 是否正确，可能和14讲旋转　平移定义的顺序不同
      Matrix6d J;
-    // J.block<3, 3>(0, 0) = SE3Quat::SO3hat(R); 
-    // J.block<3, 3>(0, 3) = SE3Quat::SO3hat(true_t);
-    // J.block<3, 3>(3, 0) = Matrix3d::Zero();
-    // J.block<3, 3>(3, 3) = SE3Quat::SO3hat(Vector3d(R));
+     J.block<3, 3>(0, 0) = SE3Quat::SO3hat(R); 
+     J.block<3, 3>(3, 0) = SE3Quat::SO3hat(fake_t);
+     J.block<3, 3>(0, 3) = Matrix3d::Zero();
+     J.block<3, 3>(3, 3) = SE3Quat::SO3hat(R);
 
-    // J = J*0.5 + Matrix6d::Identity();
+    J = J*0.5 + Matrix6d::Identity();
     //J = Matrix6d::Identity();// TODO:　try this one
 
     return J;
@@ -55,6 +56,10 @@ void EdgePose2Pose::ComputeJacobian()
      m_jacobianOplusXi = -J * estimate_j.inverse().adj();
 
      m_jacobianOplusXj = J * estimate_j.inverse().adj();
+
+
+     m_jacobians[0] = m_jacobianOplusXi;
+     m_jacobians[1] = m_jacobianOplusXj;
 
 }
 
