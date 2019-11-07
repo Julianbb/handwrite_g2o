@@ -24,18 +24,18 @@ public:
     };
 
     typedef unsigned long ulong;
-    typedef map<ulong, shared_ptr<Vertex>> HashVertex;
-    typedef unordered_map<ulong, shared_ptr<BaseEdge>> HashEdge;
-    typedef unordered_multimap<ulong, shared_ptr<BaseEdge>> HashVertexId2Edge;
+    typedef map<ulong, Vertex*> HashVertex;
+    typedef map<ulong, BaseEdge*> HashEdge;
+    typedef unordered_multimap<ulong, BaseEdge*> HashVertexId2Edge;
 
     Problem(ProblemType problem_type);
     
-    void AddVertex(shared_ptr<Vertex> v);
-    void AddEdge(shared_ptr<BaseEdge> e);
-    void RemoveVertex(shared_ptr<Vertex> v);
-    void RemoveEdge(shared_ptr<BaseEdge> e);
-    vector<shared_ptr<BaseEdge>> GetEdgesConnectToVertex(shared_ptr<Vertex> v);
-    shared_ptr<Vertex> GetVertex(ulong i);
+    void AddVertex(Vertex* v);
+    void AddEdge(BaseEdge* e);
+    void RemoveVertex(Vertex* v);
+    void RemoveEdge(BaseEdge* e);
+    vector<BaseEdge*> GetEdgesConnectToVertex(Vertex* v);
+    Vertex* GetVertex(ulong i);
     
 
     void SetOrdering();

@@ -6,4 +6,7 @@ BaseBinaryEdge<D, type_of_mesurement, type_of_vertexi, type_of_vertexj>::BaseBin
     m_vertices.resize(2);
     m_dimension = D;
     m_jacobians.resize(2);
+
+    m_information = InformationType::Identity();
+    m_error = ErrorVector::Zero();
 }

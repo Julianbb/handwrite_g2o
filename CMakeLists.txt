@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(self_BA)
-
+project(pose_graph)
 
 set(CMAKE_BUILD_TYPE "Release") 
 set(CMAKE_CXX_FLAGS "-std=c++11")
@@ -12,8 +11,9 @@ include_directories(
                 )
 
 
-add_executable(self_BA 
+add_executable(pose_graph
             test/main.cpp
+            #test/test.cpp
             backend/vertex.h
             backend/vertex.hpp
             backend/vertex_pose.h

@@ -181,8 +181,13 @@ public:
     }
 
 
-    static SE3Quat exp(const Vector6d & update)
+
+    static SE3Quat exp(const Vector6d & update_tmp)
     {
+        Vector6d update;
+        update.head<3>() = update_tmp.tail<3>();
+        update.tail<3>() = update_tmp.head<3>();
+
         Vector3d omega;
         for (int i=0; i<3; i++)
         omega[i]=update[i];
@@ -218,15 +223,15 @@ public:
     }
 
 
-//和slam十四讲不一样，李代数旋转平移顺序不一样
+
     Matrix<double, 6, 6> adj() const
     {
         Matrix3d R = m_q.toRotationMatrix();
         Matrix<double, 6, 6> res;
         res.block(0,0,3,3) = R;
         res.block(3,3,3,3) = R;
-        res.block(3,0,3,3) = SO3hat(m_t)*R;
-        res.block(0,3,3,3) = Matrix3d::Zero(3,3);
+        res.block(3,0,3,3) = Matrix3d::Zero(3,3);
+        res.block(0,3,3,3) = SO3hat(m_t)*R;
         return res;
     }
 

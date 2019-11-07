@@ -2,7 +2,7 @@
 #include <iostream>
 #include <cmath>
 #include <Eigen/Eigen>
-
+#include "vertex_pose.h"
 
 namespace ZM
 {
@@ -13,7 +13,7 @@ namespace ZM
  }
 
 
-bool IsPoseVertex(std::shared_ptr<Vertex> v)
+bool IsPoseVertex(Vertex* v)
 {
     string type = v->TypeVertex();
     if(type == std::string("VertexPose"))
@@ -23,7 +23,7 @@ bool IsPoseVertex(std::shared_ptr<Vertex> v)
 
 }
 
-bool IsLandMarkVertex(std::shared_ptr<Vertex> v)
+bool IsLandMarkVertex(Vertex* v)
 {
     string type = v->TypeVertex();
     if(type == std::string("VertexPoint"))
@@ -33,7 +33,7 @@ bool IsLandMarkVertex(std::shared_ptr<Vertex> v)
 
 }
 
-void Problem::AddVertex(shared_ptr<Vertex> v)
+void Problem::AddVertex(Vertex* v)
 {
     if(m_vertex.find(v->Id()) != m_vertex.end())
         return;
@@ -46,7 +46,7 @@ void Problem::AddVertex(shared_ptr<Vertex> v)
 
 
 
-void Problem::RemoveVertex(shared_ptr<Vertex> v)
+void Problem::RemoveVertex(Vertex* v)
 {
     if(m_vertex.find(v->Id()) == m_vertex.end())
         return;
@@ -66,7 +66,7 @@ void Problem::RemoveVertex(shared_ptr<Vertex> v)
     // }
 
     //还要　remove vertex 对应的 edge
-    vector<shared_ptr<BaseEdge>> edges_to_remove;
+    vector<BaseEdge*> edges_to_remove;
     edges_to_remove = GetEdgesConnectToVertex(v);
     for(int i=0; i<edges_to_remove.size(); i++)
     {
@@ -77,7 +77,7 @@ void Problem::RemoveVertex(shared_ptr<Vertex> v)
 
 
 
-void Problem::AddEdge(shared_ptr<BaseEdge> e)
+void Problem::AddEdge(BaseEdge* e)
 {
     if(m_edge.find(e->Id()) != m_edge.end())
         return;
@@ -93,7 +93,7 @@ void Problem::AddEdge(shared_ptr<BaseEdge> e)
 }
 
 
-void  Problem::RemoveEdge(shared_ptr<BaseEdge> e)
+void  Problem::RemoveEdge(BaseEdge* e)
 {
     if(m_edge.find(e->Id()) == m_edge.end())
         return;
@@ -105,7 +105,7 @@ void  Problem::RemoveEdge(shared_ptr<BaseEdge> e)
 }
 
 
-vector<shared_ptr<BaseEdge>> Problem::GetEdgesConnectToVertex(shared_ptr<Vertex> v)
+vector<BaseEdge*> Problem::GetEdgesConnectToVertex(Vertex* v)
 {
     vector<shared_ptr<BaseEdge>> edges;
 
@@ -120,7 +120,7 @@ vector<shared_ptr<BaseEdge>> Problem::GetEdgesConnectToVertex(shared_ptr<Vertex>
     }
 }
 
-shared_ptr<Vertex> Problem::GetVertex(ulong i)
+Vertex* Problem::GetVertex(ulong i)
 {
     assert(i<m_vertex.size());
     auto it = m_vertex.find(i);
@@ -142,7 +142,6 @@ void Problem::SetOrdering()
     unsigned int currentOrder = 0;
     for(auto& v : m_vertex)
     {
-
         m_total_demension += (v.second)->Dimension(); 
         v.second->SetOrderId(currentOrder);
         m_order_id_vertex.insert(make_pair(currentOrder, v.second));
@@ -170,13 +169,17 @@ void Problem::MakeHessian()
     MatrixXd H = MatrixXd::Zero(H_size, H_size);
     VectorXd b = VectorXd::Zero(H_size, 1);
 
+
     for(auto& edge: m_edge)
     {
         edge.second->ComputeError();
         edge.second->ComputeJacobian();
 
+
         auto jacobians = edge.second->Jacobians();
         auto verteies = edge.second->Verteies();
+
+
         assert(jacobians.size() == verteies.size());
 
         for(int i=0; i<verteies.size(); i++)
@@ -189,7 +192,10 @@ void Problem::MakeHessian()
             ulong index_i = v_i->OrderId();
             ulong dim_i = v_i->Dimension();
 
-            MatrixXd Jt = jacobiani.transpose();
+            Eigen::Map<Matrix<double, 6, 6>> info_matrix(edge.second->InformationData()); // 信息矩阵
+
+            MatrixXd Jt = jacobiani.transpose()*info_matrix;
+            
             for(int j=i; j<verteies.size(); j++)
             {
                 auto v_j = verteies[j];
@@ -205,7 +211,7 @@ void Problem::MakeHessian()
                 H.block(index_i, index_j, dim_i, dim_j).noalias() += Hessian;
                 if(i!=j) //对称
                 {
-                    H.block(index_j, index_j, dim_j, dim_i).noalias() += Hessian.transpose();
+                    H.block(index_j, index_i, dim_j, dim_i).noalias() += Hessian.transpose();
                 }
             }
             VectorXd::ConstMapType tmp_b (edge.second->ErrorData(), edge.second->Dimension());
@@ -213,13 +219,73 @@ void Problem::MakeHessian()
         }
     }
 
+
+    // TODO: Ax = b, 如果A的行列式为0, A不可逆，LM算法每次解方程对角＋lamda,保证矩阵可逆
     m_H = H;
     m_b = b;
+   
     m_deltax = VectorXd::Zero(H_size);
 }
 
 
 
+// void Problem::MakeHessian()
+// {
+//     ulong H_size = m_total_demension;
+//     ulong edge_size = m_edge.size();
+//     MatrixXd J = MatrixXd::Zero(edge_size*6, H_size);
+//     VectorXd b = VectorXd::Zero(edge_size*6, 1);
+
+//     int index_edge = 0;
+//     for(auto& edge: m_edge)
+//     {
+//         // VertexPose6Dof* v11 = static_cast<VertexPose6Dof*>(edge.second->Vertexi(0));
+//         // VertexPose6Dof* v22 = static_cast<VertexPose6Dof*>(edge.second->Vertexi(1));
+
+//         edge.second->ComputeError();
+//         edge.second->ComputeJacobian();
+
+//         auto jacobians = edge.second->Jacobians();
+//         auto verteies = edge.second->Verteies();
+
+//         assert(jacobians.size() == verteies.size());
+
+
+//         auto v_i = verteies[0];
+//         // if(v_i->IsFixed())
+//         //     continue;
+        
+//         auto jacobiani = jacobians[0];
+//         ulong index_i = v_i->OrderId();
+//         ulong dim_i = v_i->Dimension();
+
+//         auto v_j = verteies[1];
+//         // if(v_j->IsFixed())
+//         //     continue;
+        
+//         auto jacobianj = jacobians[1];
+//         ulong index_j = v_j->OrderId();
+//         ulong dim_j = v_j->Dimension();
+
+//         J.block(index_edge, index_i, 6, 6).noalias() = jacobiani;
+//         J.block(index_edge, index_j, 6, 6).noalias() = jacobianj;
+        
+    
+//         VectorXd::ConstMapType tmp_b (edge.second->ErrorData(), edge.second->Dimension());
+//         b.segment(index_edge, 6) = tmp_b;
+
+//         index_edge += 6;   //只针对 pose_graph
+//     }
+    
+//     // TODO: Ax = b, 如果A的行列式为0, A不可逆，怎么解决????
+//     MatrixXd Jt = J.transpose();
+//     m_H = Jt*J;
+//     cout << Jt.cols() <<endl;
+//     cout << b.rows() << endl;
+//     m_b = -Jt*b;
+     
+//     m_deltax = VectorXd::Zero(H_size);
+// }
 
 
 
@@ -243,7 +309,7 @@ void Problem::InitLMParameters()
         maxDiagnal = std::max(std::fabs(m_H(i,i)), maxDiagnal);
 
     double tau = 1e-5;
-    double m_lambda = tau*maxDiagnal;  // lamda初始值　= 1e-5 * H对角元素的最大值
+    m_lambda = tau*maxDiagnal;  // lamda初始值　= 1e-5 * H对角元素的最大值
 
 }
 
@@ -359,7 +425,13 @@ void Problem::SolveLinearSystem()
 
     if(m_problem_type == GENERAL_PROBLEM)
     {
-        m_deltax = m_H.inverse() * m_b;
+
+        MatrixXd tmp_H = m_H;
+        for(int i = 0; i <m_H.rows(); i++) // 解方程对角线+lamda
+            tmp_H(i,i) += m_lambda;
+       //m_deltax = PCGSolver(tmp_H, m_b, m_H.rows() * 2); //TODO PCGSolver根本就没改变结果???
+        //m_deltax = tmp_H.inverse() * m_b;
+        m_deltax = tmp_H.llt().solve(m_b);
     }
 
 }
@@ -380,10 +452,12 @@ void Problem::UpdateStates()
 {
     for(auto& v : m_vertex)
     {
+        if(v.second->IsFixed())
+            continue;
         int index = v.second->OrderId();
         int dim = v.second->Dimension();
         VectorXd x_part = m_deltax.segment(index, dim);
-        v.second->Plus(&x_part[0]); //
+        v.second->Plus(&x_part[0]); 
     }
 }
 
@@ -406,12 +480,15 @@ bool Problem::Solve(int itrators)
 
     while(!stop && (its < itrators))
     {
-        std::cout << "iter: " << its << " , chi= " << m_chi2 << " , Lambda= " << m_lambda << std::endl;
         bool oneStepSucceed = false;
         int false_cnt = 0;
+
+        std::cout << "iter: " << its << " , chi= " << m_chi2 << " , Lambda= " << m_lambda  << " false_cnt: "  << false_cnt << std::endl;
+
         while(!oneStepSucceed)
         {
             SolveLinearSystem();
+
             if(m_deltax.squaredNorm() < 1e-6 || false_cnt > 10)
             {
                 stop = true;
@@ -431,7 +508,6 @@ bool Problem::Solve(int itrators)
                 RollbackStates(); // 误差没下降，回滚
             }
         }
-
 
         its++;
         if(m_chi2 < m_stop_chi2)
@@ -484,6 +560,9 @@ VectorXd Problem::PCGSolver(const MatrixXd &A, const VectorXd &b, int maxIter)
         x += alpha * p;
         r1 -= alpha * w;
     }
+    
+    // cout << x << endl;
+    // cout << x.squaredNorm() << endl;
     return x;
 }
 

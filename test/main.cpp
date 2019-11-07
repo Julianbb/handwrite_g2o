@@ -1,51 +1,99 @@
 #include <iostream>
+#include <string>
+#include <fstream>
+#include <vector>
 #include "vertex.h"
 #include "vertex_point.h"
 #include "vertex_pose.h"
 #include "edge_SE3ProjectXYZ.h"
 #include "edge_pose2pose.h"
 #include "se3quat.h"
-
-
+#include "problem.h"
 
 using namespace std;
-
+using namespace Eigen;
+using namespace ZM;
  
 
-int main()
+int main(int argc, char* argv[])
 {
-    ZM::vertexPoint3D* v1 = new ZM::vertexPoint3D();
-    Eigen::Vector3d xx(1,2,3);
-    v1->SetParameters(xx);
-    cout << v1->Parameters() << endl;
-    cout << v1->Dimension() << endl;
-     
+   if(argc < 2)
+   {
+       std::cout << "wrong usage" << endl;
+       return -1;
+   }
 
-    ZM::VertexPose6Dof* v2 = new ZM::VertexPose6Dof();
-    v2->SetParameters(ZM::SE3Quat());
+    std::string file = argv[1];
+    ifstream fin(file.c_str());
+    if(!fin)
+    {
+        std::cout << "could not open file" << endl;
+        return -2;
+    }
 
-    ZM::VertexPose6Dof* v3 = new ZM::VertexPose6Dof();
-    v3->SetParameters(ZM::SE3Quat());
- 
-    Eigen::Matrix3d K;
-    ZM::EdgeSE3ProjectXYZ* e = new ZM::EdgeSE3ProjectXYZ(K);
-    ZM::EdgePose2Pose* e2 = new ZM::EdgePose2Pose();
-    e->SetVertex(0, v1);
-    e->SetVertex(1, v2);
+    int vertex_cnt = 0, edge_cnt = 0;
+    vector<VertexPose6Dof*> vertex_pose;
+    vector<EdgePose2Pose*>  edge_pose;
 
-    ZM::VertexPose6Dof* x = static_cast<ZM::VertexPose6Dof*>(e->Vertexi(1));
-    ZM::SE3Quat wo = x->Parameters() ;
-    
-    cout <<wo.Translation()<< endl;
-    cout <<wo.Rotation().toRotationMatrix()<< endl;
 
-    
-    e2->SetVertex(0, v2);
-    e2->SetVertex(1, v3);
-    ZM::VertexPose6Dof* xxx = static_cast<ZM::VertexPose6Dof*>(e2->Vertexi(1));
-    ZM::SE3Quat woo = xxx->Parameters() ;
-    
-    cout <<woo.Translation()<< endl;
-    cout <<woo.Rotation().toRotationMatrix()<< endl;
+    Problem problem(Problem::GENERAL_PROBLEM);
+    while(!fin.eof())
+    {
+        string name;
+        fin >> name;
 
+        if(name == "VERTEX_SE3:QUAT")
+        {
+            VertexPose6Dof* v = new VertexPose6Dof();
+            int index = 0; 
+            fin >> index;
+            v->SetId(index);
+            v->read(fin);
+            
+            if(index == 0)
+                v->SetFixed(true);
+            problem.AddVertex(v);
+            vertex_cnt++;
+            vertex_pose.push_back(v);
+        }
+        else if(name == "EDGE_SE3:QUAT")
+        {
+            EdgePose2Pose* e = new EdgePose2Pose();
+            int index_i, index_j;
+            fin >> index_i >> index_j;
+            e->SetId(edge_cnt);
+            Vertex* xx = problem.GetVertex(index_i);
+            e->SetVertex(0, problem.GetVertex(index_i));
+            e->SetVertex(1, problem.GetVertex(index_j));
+
+            e->read(fin);
+            problem.AddEdge(e);
+            edge_pose.push_back(e);
+            edge_cnt++;
+        }
+    }
+    fin.close();
+
+
+    std::cout << "total vertices " << vertex_cnt << endl;
+    std::cout << "total edges " << edge_cnt << endl;
+    std::cout << "preparing optimizing" << endl;
+
+
+    problem.Solve(30);
+
+    std::cout << "saving optimizing result" << endl;
+    ofstream fout("result.g2o");
+    for(auto& v:vertex_pose)
+    {
+        fout << "VERTEX_SE3:QUAT ";
+        v->write(fout);
+    }
+    for(auto& e: edge_pose)
+    {
+        fout << "EDGE_SE3:QUAT ";
+        e->write(fout);
+    }
+
+    fout.close();
 }
